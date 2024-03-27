@@ -5,7 +5,11 @@
     <main role="main">
         <header>
             <div>
-
+                <nav>
+                    <ul>
+                        <li><nuxt-link to="/">Home</nuxt-link></li>
+                    </ul>
+                </nav>
             </div>
         </header>
         <slot />
