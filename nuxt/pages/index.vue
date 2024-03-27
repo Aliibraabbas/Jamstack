@@ -4,87 +4,190 @@
 import type { Player } from '~/models/player.model';
 import type { Meta } from "~/models/strapi.model";
 import type { Competition } from "~/models/competition.model";
+import Fuse from 'fuse.js'
 
 const { find } = useStrapi4();
-const competitions = ref<{ data: Competition[] }>({ data: [] });
-const players = ref<{ data: Player[], meta: Meta }>({ data: [], meta: {} });
-const filters = ref<string[]>([]);
-const page = ref(1);
-const pageSize = ref(5);
 
-const {  pending: playersPending, refresh: refreshPlayers } = useAsyncData('players', async () => {
-  players.value = await find<{ data: Player[], meta: Meta }>('players', {
-    populate: '*',
-    pagination: {
-      page: page.value,
-      pageSize: pageSize.value
-    },
-    filters: {
-      competitions: {
-        name: {
-          $in: filters.value
+
+// const competitions = ref<{ data: Competition[] }>({ data: [] });
+// const players = ref<{ data: Player[], meta: Meta }>({ data: [], meta: {} });
+const filters = ref<string[]>([]);
+const search = ref<string>('')
+const page = ref(1);
+const pageSize = ref(6);
+
+const { data: players, pending: playersPending, refresh: refreshPlayers } = useAsyncData('players', () => find<{ 
+        data: Player[],
+        meta: Meta
+        }>('players', { 
+            populate: '*',
+            pagination: {
+                page: page.value,
+                pageSize: pageSize.value
+            },
+            filters: {
+                competitions: {
+                    name: {
+                        $in: filters.value
+                    }
+                },
+            }
+        }), {
+            watch: [page, filters],
         }
+    )
+
+    const { data: searchedPlayers, pending: searchedPlayersPending } = useAsyncData('searchedPlayers',() => find<{
+        data: Player[] 
+        }>('players', { 
+            populate: '*',
+            filters: {
+                competitions: {
+                    name: {
+                        $in: filters.value
+                    }
+                },
+            }
+        }),  {
+            watch: [filters, search],
+        }
+    )
+
+    const { data: competitions, pending: competitionsPending } = useAsyncData('competitions',
+        () => find<{ data: Competition[] }>('competitions')
+    )
+
+    const addFilter = (filter: string) => {
+        if(!filters.value.includes(filter)) {
+            filters.value.push(filter)
+        } else {
+            filters.value = filters.value.filter(f => f !== filter)
+        }
+        refreshPlayers()
+    }
+
+
+
+    let fuse: Fuse<Player> | null = null;
+    let searchResults = ref<Player[]>([]);
+
+    watch(searchedPlayers, () => {
+      if (searchedPlayers.value) {
+        fuse = new Fuse(searchedPlayers.value.data, {
+          keys: ['first_name' , 'last_name'],
+          threshold: 0.1
+        });
+      }
+    });
+
+    const searchPlayers = () => {
+      if (fuse) {
+        searchResults.value = fuse.search(search.value).map((result: Fuse.FuseResult<Player>) => result.item);
+      } else {
+        searchResults.value = [];
       }
     }
-  });
-}, {
-  watch: [page, filters],
-});
 
-const { pending: competitionsPending } = useAsyncData('competitions', async () => {
-  competitions.value = await find<{ data: Competition[] }>('competitions');
-});
+    // watch(search, () => {
+    //   searchPlayers();
+    // });
 
-const addFilter = (filter: string) => {
-  if (!filters.value.includes(filter)) {
-    filters.value.push(filter);
-  } else {
-    filters.value = filters.value.filter(f => f !== filter);
-  }
-  refreshPlayers();
-};
+    // onMounted(() => {
+    //     if (!competitions.value) {
+    //         find<{ data: Competition[] }>('competitions')
+    //     }
+    // })
+
+    // onUnmounted(() => {
+    //     filters.value = []
+    // })
+
+    // onBeforeUnmount(() => {
+    //     filters.value = []
+    // })
+
 
 </script>
 
 <template>
     
-    <template v-if="competitionsPending">
-          <span>Loading Competitions....</span>
-      </template>
-  
-      <template v-else>
-          <div class="">
-              <h3>Compétitions</h3>
-              <button v-for="competition in competitions?.data"
-              :key="competition.id"
-              :class="[filters.includes(competition.name) ? 'bg-gray-300 ' : ' bg-white']" 
-              @click="addFilter(competition.name)">
-                  {{ competition.name }}
-              </button>
-          </div>
-      </template>
-  
-      <template v-if="playersPending">
-          <span>Loading players....</span>
-      </template>
-  
-      <template v-else>
-          <div class="">
-              <div v-for="player in players?.data" :key="player.slug">
-                  <a :href="`/players/${player.slug}`" class="underline">
-                      <h2>{{player.first_name}} {{player.last_name}}</h2>
-                  </a>
-              </div>
-              <UPagination v-if="players?.meta && players?.meta.pagination.pagecount > 1" 
-                          v-model="page" 
-                          :page-count="players?.meta.pagination.pagecount" 
-                          :total="players?.Meta.pagination.total"
-                          class=""
-              />
-          </div>
-      </template>
-  </template>
+        <div>
+            <input class="" type="text" v-model="search" @input="searchPlayers" placeholder="Search">
+            <template v-if="!search">
+            </template>
+        </div>
 
+
+        <template v-if="!search">
+            <div class=""> 
+                <template v-if="competitionsPending">
+                    <span>Loading Competitions....</span>
+                </template>
+                <template v-else>
+                    <div class="">
+                        <button v-for="competition in competitions?.data"
+                        :key="competition.id"
+                        :class="[filters.includes(competition.name) ? 'bg-gray-200' : 'bg-white']" 
+                        @click="addFilter(competition.name)"
+                        class=""
+                        >
+                            {{ competition.name }}
+                        </button>
+                    </div>
+                </template>
+            </div>
+
+
+            <div class="">
+                <template v-if="playersPending">
+                    <span >Loading players....</span>
+                </template>
+                <template v-else>
+                    <div class="">
+                        <div v-for="player in (search ? searchResults : players?.data)" :key="player.slug">
+                            <a :href="`/players/${player.slug}`">
+                                <!-- <NuxtImg v-if="player.image" :src="player.image?.url" :alt="player.slug" class="w-full h-48 object-cover" /> -->
+                                <div class="">
+                                    <div> {{player.ranking}}</div>
+                                    <h2>{{player.first_name}} {{player.last_name}}</h2>
+                                </div>
+                            </a>
+                        </div> 
+                    </div>
+                </template>
+                <UPagination v-if="players?.meta && players?.meta.pagination.pageCount > 1" 
+                    v-model="page" 
+                    :page-count="pageSize" 
+                    :total="players?.meta.pagination.total"
+                    class=""
+                /> 
+            </div>
+        </template>
+
+        
+
+        <template v-else>
+            <div class="">
+                <template v-if="searchedPlayersPending">
+                    <span>Loading players....</span>
+                </template>
+                <template v-else>
+                    <div>
+                        <div v-for="player in (search ? searchResults : searchedPlayers?.data)" :key="player.slug">
+                            <a :href="`/players/${player.slug}`">
+                                <!-- <NuxtImg v-if="player.image" :src="player.image?.url" :alt="player.slug" class="w-full h-48 object-cover" /> -->
+                                <div>
+                                    <div> {{player.ranking}}</div>
+                                    <h2>{{player.first_name}} {{player.last_name}}</h2>
+                                </div>
+                            </a>
+                        </div> 
+                    </div>
+                </template>
+            </div>
+        </template>
+
+</template>
   
   <style scoped>
         .active {

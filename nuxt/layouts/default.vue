@@ -4,13 +4,14 @@
 <template>
     <main role="main">
         <header>
-            <nav>The nav</nav>
-            <div/>
+            <div>
+
+            </div>
         </header>
         <slot />
 
         <footer>
-            The footer
+     
         </footer>
     </main>
 </template>
