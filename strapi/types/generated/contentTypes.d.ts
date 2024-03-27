@@ -362,6 +362,82 @@ export interface AdminTransferTokenPermission extends Schema.CollectionType {
   };
 }
 
+export interface ApiCompetitionCompetition extends Schema.CollectionType {
+  collectionName: 'competitions';
+  info: {
+    singularName: 'competition';
+    pluralName: 'competitions';
+    displayName: 'competition';
+    description: '';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    name: Attribute.String & Attribute.Required & Attribute.Unique;
+    players: Attribute.Relation<
+      'api::competition.competition',
+      'manyToMany',
+      'api::player.player'
+    >;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::competition.competition',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::competition.competition',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiPlayerPlayer extends Schema.CollectionType {
+  collectionName: 'players';
+  info: {
+    singularName: 'player';
+    pluralName: 'players';
+    displayName: 'Player';
+    description: '';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    first_name: Attribute.String & Attribute.Required;
+    last_name: Attribute.String & Attribute.Required & Attribute.Unique;
+    ranking: Attribute.Integer & Attribute.Required & Attribute.Unique;
+    image: Attribute.Media;
+    competitions: Attribute.Relation<
+      'api::player.player',
+      'manyToMany',
+      'api::competition.competition'
+    >;
+    full_name: Attribute.String & Attribute.Private;
+    slug: Attribute.UID<'api::player.player', 'full_name'>;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    publishedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::player.player',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::player.player',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface PluginUploadFile extends Schema.CollectionType {
   collectionName: 'files';
   info: {
@@ -788,82 +864,6 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
   };
 }
 
-export interface ApiCompetitionCompetition extends Schema.CollectionType {
-  collectionName: 'competitions';
-  info: {
-    singularName: 'competition';
-    pluralName: 'competitions';
-    displayName: 'competition';
-    description: '';
-  };
-  options: {
-    draftAndPublish: false;
-  };
-  attributes: {
-    name: Attribute.String & Attribute.Required & Attribute.Unique;
-    players: Attribute.Relation<
-      'api::competition.competition',
-      'manyToMany',
-      'api::player.player'
-    >;
-    createdAt: Attribute.DateTime;
-    updatedAt: Attribute.DateTime;
-    createdBy: Attribute.Relation<
-      'api::competition.competition',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-    updatedBy: Attribute.Relation<
-      'api::competition.competition',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-  };
-}
-
-export interface ApiPlayerPlayer extends Schema.CollectionType {
-  collectionName: 'players';
-  info: {
-    singularName: 'player';
-    pluralName: 'players';
-    displayName: 'Player';
-    description: '';
-  };
-  options: {
-    draftAndPublish: true;
-  };
-  attributes: {
-    first_name: Attribute.String & Attribute.Required;
-    last_name: Attribute.String & Attribute.Required & Attribute.Unique;
-    ranking: Attribute.Integer & Attribute.Required & Attribute.Unique;
-    image: Attribute.Media;
-    competitions: Attribute.Relation<
-      'api::player.player',
-      'manyToMany',
-      'api::competition.competition'
-    >;
-    full_name: Attribute.String & Attribute.Private;
-    slug: Attribute.UID<'api::player.player', 'full_name'>;
-    createdAt: Attribute.DateTime;
-    updatedAt: Attribute.DateTime;
-    publishedAt: Attribute.DateTime;
-    createdBy: Attribute.Relation<
-      'api::player.player',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-    updatedBy: Attribute.Relation<
-      'api::player.player',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-  };
-}
-
 declare module '@strapi/types' {
   export module Shared {
     export interface ContentTypes {
@@ -874,6 +874,8 @@ declare module '@strapi/types' {
       'admin::api-token-permission': AdminApiTokenPermission;
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
+      'api::competition.competition': ApiCompetitionCompetition;
+      'api::player.player': ApiPlayerPlayer;
       'plugin::upload.file': PluginUploadFile;
       'plugin::upload.folder': PluginUploadFolder;
       'plugin::content-releases.release': PluginContentReleasesRelease;
@@ -882,8 +884,6 @@ declare module '@strapi/types' {
       'plugin::users-permissions.permission': PluginUsersPermissionsPermission;
       'plugin::users-permissions.role': PluginUsersPermissionsRole;
       'plugin::users-permissions.user': PluginUsersPermissionsUser;
-      'api::competition.competition': ApiCompetitionCompetition;
-      'api::player.player': ApiPlayerPlayer;
     }
   }
 }

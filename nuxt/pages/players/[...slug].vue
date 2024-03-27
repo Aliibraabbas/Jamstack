@@ -10,6 +10,5 @@
 </script>
 
 <template>
-    <h1>OUi</h1>
-    <pre>{{ player }}</pre>
+    <pre>{{ player.data }}</pre>
 </template>
